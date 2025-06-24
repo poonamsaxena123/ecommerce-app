@@ -1,6 +1,15 @@
+name: Build and Push Docker image
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
 
@@ -10,7 +19,7 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Build & Push image
+      - name: Build and push image
         run: |
           docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/eco-project:latest .
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/eco-project:latest
