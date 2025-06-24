@@ -1,0 +1,60 @@
+name: Django CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main  # Or your default branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # ✅ 1. Checkout repo
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # ✅ 2. Set up Docker
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    # ✅ 3. Build Docker image
+    - name: Build Docker image
+      run: |
+        docker build -t myapp .
+
+    # ✅ 4. Copy files to server + run container remotely
+    - name: Deploy to Server via SSH
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          cd /home/${{ secrets.USERNAME }}
+
+          # Optional: stop old container
+          docker stop myapp || true
+          docker rm myapp || true
+
+          # Optional: remove old image
+          docker rmi myapp || true
+
+          # Pull latest code
+          if [ ! -d repo ]; then
+            git clone https://github.com/${{ github.repository }} repo
+          else
+            cd repo && git pull origin main && cd ..
+          fi
+
+          cd repo
+
+          # Build image
+          docker build -t myapp .
+
+          # Run new container
+          docker run -d --name myapp -p 80:8000 \
+            -e DJANGO_SUPERUSER_EMAIL=${{ secrets.SUPERUSER_EMAIL }} \
+            -e DJANGO_SUPERUSER_USERNAME=${{ secrets.SUPERUSER_USERNAME }} \
+            -e DJANGO_SUPERUSER_PASSWORD=${{ secrets.SUPERUSER_PASSWORD }} \
+            myapp
